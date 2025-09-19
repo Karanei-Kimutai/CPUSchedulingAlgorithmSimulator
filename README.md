@@ -1,5 +1,4 @@
 # CPU Scheduling Algorithm Simulator
-# CPU Scheduler Simulator
 
 ## Overview
 

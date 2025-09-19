@@ -2,7 +2,7 @@
 
 ## Overview
 
-The CPU Scheduler Simulator is a Python-based application that demonstrates various CPU scheduling algorithms used in operating systems. This educational tool allows users to input processes with different characteristics and observe how different scheduling algorithms handle process execution, providing insights into their performance metrics.
+The CPU Scheduling Algorithm Simulator is a Python-based application that demonstrates various CPU scheduling algorithms used in operating systems. This educational tool allows users to input processes with different characteristics and observe how different scheduling algorithms handle process execution, providing insights into their performance metrics.
 
 ## Features
 

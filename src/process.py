@@ -1,6 +1,6 @@
 class Process:
     """Represents a single process in CPU scheduling"""
-    def __init__(self,processId,arrivalTime,burstTime,priority):
+    def __init__(self,processId,arrivalTime,burstTime,priority=None):
         self.processId=processId
         self.arrivalTime=arrivalTime
         self.burstTime=burstTime

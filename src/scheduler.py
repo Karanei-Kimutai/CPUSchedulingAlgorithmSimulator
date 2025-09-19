@@ -67,7 +67,16 @@ class Scheduler:
         return self.calculatePerformance(finishedProcesses)
 
     def shortestJobFirst(self):
-        """Shortest Job First (non-preemptive)"""
+        """
+        This method implements the non-preemptive Shortest Job First scheduling algorithm.
+        It begins by resetting all process states and initializing the current time to zero.
+        The algorithm maintains a list of unfinished processes and iterates until all processes are completed.
+        At each step, it identifies all processes that have arrived by the current time.
+        If no processes are available, it advances time to the next process arrival. From the available processes, it selects the one with the smallest burst time (shortest job).
+        For the selected process, it calculates response time (if this is the first time it's scheduled), updates the current time by adding the process's burst time, then computes completion time, turnaround time, and waiting time.
+        The completed process is moved to the finished list and removed from the pending list.
+        Finally, it returns performance metrics for all completed processes.
+        """
         self.resetProcesses()
         currentTime=0
         finishedProcesses=[]
@@ -96,7 +105,17 @@ class Scheduler:
 
 
     def shortestRemainingTimeFirstFCFS(self):
-        """SRTF (preemptive), ties broken for FCFS(earliest arrival)"""
+        """
+        This method implements the preemptive Shortest Remaining Time First algorithm with FCFS tie-breaking.
+        It starts by resetting process states and initializing time to zero.
+        The algorithm maintains separate lists for unfinished processes and a ready queue of processes that have arrived but not completed.
+        It processes in time increments, checking for new arrivals at each time unit.
+        If no processes are ready, it advances time to the next arrival.
+        From the ready queue, it selects the process with the smallest remaining burst time, breaking ties by choosing the earliest arrival (FCFS).
+        It records response time when a process first runs, then executes the process for one time unit.
+        When a process completes (burst time reaches zero), it calculates completion metrics and moves it to the finished list.
+        This continues until all processes are completed, then returns performance metrics.
+        """
         self.resetProcesses()
         currentTime=0
         processesLeft=self.processes[:]
@@ -128,7 +147,14 @@ class Scheduler:
 
 
     def shortestRemainingTimeFirstPriority(self):
-        """SRTF(preemptive), ties broken by priority(higher value= higher priority)."""
+        """
+        This method implements the preemptive Shortest Remaining Time First algorithm with priority-based tie-breaking.
+        It first ensures all processes have priority values assigned, prompting for input if missing.
+        Like the FCFS version, it maintains unfinished processes and a ready queue, processing in single time unit increments.
+        The key difference is in tie-breaking: when multiple processes have the same remaining burst time, it selects the one with the highest priority (largest priority value).
+        It updates response time on first execution, processes for one time unit, and handles completion by calculating final metrics.
+        The algorithm continues until all processes finish, then returns comprehensive performance statistics including average waiting time, turnaround time, response time, and throughput.
+        """
         #Ask for priorities
         for process in self.processes:
             if process.priority is None:

@@ -8,3 +8,15 @@ def safeInput(prompt):
             return value
         except ValueError as error:
             print(f"Invalid input: {error}. Please try again.")
+
+
+def safePriorityInput(prompt):
+    """Get a valid priority (positive integer)."""
+    while True:
+        try:
+            value = int(input(prompt))
+            if value <= 0:
+                raise ValueError("Priority must be a positive integer")
+            return value
+        except ValueError as error:
+            print(f"Invalid input: {error}. Please try again.")

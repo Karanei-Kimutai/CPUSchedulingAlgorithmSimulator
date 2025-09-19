@@ -1,4 +1,5 @@
 from process import Process
+from utils import safePriorityInput
 
 class Scheduler:
     """Implements different CPU scheduling algorithms."""
@@ -128,6 +129,10 @@ class Scheduler:
 
     def shortestRemainingTimeFirstPriority(self):
         """SRTF(preemptive), ties broken by priority(higher value= higher priority)."""
+        #Ask for priorities
+        for process in self.processes:
+            if process.priority is None:
+                process.priority=safePriorityInput(f"Enter priority for Process {process.processId}: ")
         self.resetProcesses()
         currentTime=0
         processesLeft=self.processes[:]

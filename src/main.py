@@ -17,7 +17,7 @@ if __name__=="__main__":
         print("1. First Come First Serve (FCFS)")
         print("2. Shortest Job First (SJF)")
         print("3. Shortest Remaining Time First (FCFS tie-break)")
-        print("4. Shortest Remaining Time First (Priority tie-break")
+        print("4. Shortest Remaining Time First (Priority tie-break)")
         print("5. Exit")
 
         choice=safeInput("Enter your choice: ")

@@ -23,9 +23,8 @@ class DataGenerator:
     Create and persist synthetic process datasets according to user-selected patterns.
     """
 
-    def __init__(self, outputDirectory: str = "src/outputs"):
-        self.outputDirectory = outputDirectory
-        ensureDirectoryExists(self.outputDirectory)
+    def __init__(self, outputDirectory: str = "outputs"):
+        self.outputDirectory = ensureDirectoryExists(outputDirectory)
 
     def generateProcesses(
         self,

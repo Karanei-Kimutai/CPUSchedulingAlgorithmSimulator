@@ -44,10 +44,9 @@ def main():
     roundRobinQuantum = safeInput("Enter Round Robin time quantum (e.g., 2 or 4): ", int)
 
     # Ensure outputs directories exist
-    outputDirectory = "outputs"
+    outputDirectory = ensureDirectoryExists("outputs")
     graphsDirectory = os.path.join(outputDirectory, "graphs")
-    ensureDirectoryExists(outputDirectory)
-    ensureDirectoryExists(graphsDirectory)
+    
 
     # Data generation
     dataGenerator = DataGenerator(outputDirectory)

@@ -46,8 +46,7 @@ def main():
     # Ensure outputs directories exist
     outputDirectory = ensureDirectoryExists("outputs")
     graphsDirectory = os.path.join(outputDirectory, "graphs")
-    ensureDirectoryExists(outputDirectory)
-    ensureDirectoryExists(graphsDirectory)
+    
 
     # Data generation
     dataGenerator = DataGenerator(outputDirectory)

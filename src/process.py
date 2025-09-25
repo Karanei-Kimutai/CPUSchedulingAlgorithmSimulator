@@ -1,16 +1,17 @@
 class Process:
-    """Represents a single process in CPU scheduling"""
-    def __init__(self,processId,arrivalTime,burstTime,priority=None):
-        self.processId=processId
-        self.arrivalTime=arrivalTime
-        self.burstTime=burstTime
-        self.priority=priority
+    """
+    Represents a process in the CPU scheduling simulation.
+    """
 
-        #Values computed during scheduling
-        self.completionTime=0
-        self.turnaroundTime=0
-        self.waitingTime=0
-        self.responseTime=-1  #-1 means "not yet set"
+    def __init__(self, processId, arrivalTime, burstTime, priority=1):
+        self.processId = processId
+        self.arrivalTime = arrivalTime
+        self.burstTime = burstTime
+        self.originalBurstTime = burstTime
+        self.priority = priority
 
-        #Keep a copy of the original burst time (important for preemptive algorithms)
-        self.originalBurstTime= burstTime
+        # Metrics initialized to defaults
+        self.completionTime = 0
+        self.turnaroundTime = 0
+        self.waitingTime = 0
+        self.responseTime = -1  # -1 means not yet responded

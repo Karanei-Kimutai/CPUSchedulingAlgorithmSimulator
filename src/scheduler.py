@@ -1,197 +1,418 @@
+# src/scheduler.py
+
+"""
+Scheduler module: implements CPU scheduling algorithms and performance calculations.
+
+Priority convention: higher numeric value = higher priority.
+All methods return a dictionary with keys:
+  "Average Waiting Time", "Average Turnaround Time", "Average Response Time", "Throughput"
+"""
+
+from copy import deepcopy
+from collections import deque
+from typing import List, Dict
 from process import Process
-from utils import safePriorityInput
+
 
 class Scheduler:
-    """Implements different CPU scheduling algorithms."""
-    def __init__(self, processes):
-        self.processes=processes
+    def __init__(self, processes: List[Process], contextSwitchTime: int = 0):
+        """
+        Initialize scheduler.
 
-    def resetProcesses(self):
-        """Resets all processes before running another algorithm."""
-        for process in self.processes:
-            process.completionTime=0
-            process.turnaroundTime=0
-            process.waitingTime=0
-            process.responseTime=-1
-            process.burstTime=process.originalBurstTime  #restore burst time
+        Args:
+            processes: list of Process objects (will not be mutated; deep copies are used).
+            contextSwitchTime: fixed overhead (int) applied when switching CPU between processes.
+        """
+        self.originalProcesses = deepcopy(processes)
+        self.contextSwitchTime = int(contextSwitchTime)
 
+    # ---------------- Utility ---------------- #
 
-    def calculatePerformance(self,finishedProcesses):
-        """Calculate average metrics and throughput for a list of finished processes."""
-        numberOfProcesses=len(finishedProcesses)
+    def _makeProcessCopy(self) -> List[Process]:
+        """Return a deep copy of the original processes to run a scheduling algorithm on."""
+        return deepcopy(self.originalProcesses)
 
-        totalWaitingTime=sum(process.waitingTime for process in finishedProcesses)
-        totalTurnaroundTime=sum(process.turnaroundTime for process in finishedProcesses)
-        totalResponseTime=sum(process.responseTime for process in finishedProcesses)
+    def _computePerformance(self, finishedProcesses: List[Process]) -> Dict[str, float]:
+        """
+        Compute average waiting time, turnaround time, response time and throughput.
 
-        averageWaitingTime=totalWaitingTime/numberOfProcesses
-        averageTurnaroundTime= totalTurnaroundTime/numberOfProcesses
-        averageResponseTime=totalResponseTime/numberOfProcesses
+        Assumes each Process in finishedProcesses has completionTime set.
+        """
+        numberOfProcesses = len(finishedProcesses)
+        if numberOfProcesses == 0:
+            return {
+                "Average Waiting Time": 0.0,
+                "Average Turnaround Time": 0.0,
+                "Average Response Time": 0.0,
+                "Throughput": 0.0,
+            }
 
-        totalTime=max(process.completionTime for process in finishedProcesses)
-        throughput=numberOfProcesses/ totalTime
+        totalWaitingTime = sum(p.waitingTime for p in finishedProcesses)
+        totalTurnaroundTime = sum(p.turnaroundTime for p in finishedProcesses)
+        # responseTime can be -1 for processes that never started (shouldn't happen); treat as 0 for safety
+        totalResponseTime = sum((p.responseTime if p.responseTime >= 0 else 0) for p in finishedProcesses)
 
-        return{
+        averageWaitingTime = totalWaitingTime / numberOfProcesses
+        averageTurnaroundTime = totalTurnaroundTime / numberOfProcesses
+        averageResponseTime = totalResponseTime / numberOfProcesses
+
+        totalTime = max((p.completionTime for p in finishedProcesses), default=0)
+        throughput = numberOfProcesses / totalTime if totalTime > 0 else 0.0
+
+        return {
             "Average Waiting Time": averageWaitingTime,
             "Average Turnaround Time": averageTurnaroundTime,
             "Average Response Time": averageResponseTime,
             "Throughput": throughput,
         }
 
-    #Scheduling algorithms
-    def firstComeFirstServe(self):
-        """First come first serve (non-preemptive)"""
-        self.resetProcesses()
-        currentTime=0
-        finishedProcesses=[]
+    # ---------------- Algorithms ---------------- #
 
+    def firstComeFirstServe(self) -> Dict[str, float]:
         """
-        The sorted() function in Python takes a list and returns a new list where the elements are arranged in order, without changing the original list.
-        In this case, we are sorting self.processes, which is a list of Process objects.
-        The key argument tells sorted() what property of each object to use for comparison.
-        Here, we use "key=lambda process: process.arrivalTime".
-        lambda process: process.arrivalTime means: for each process, return its arrivalTime, and sort based on that.
-        This ensures that the processes are arranged from the earliest arrivalTime to the latest arrivalTime.
+        FCFS (non-preemptive).
         """
-        for process in sorted(self.processes,key=lambda process:process.arrivalTime):
-            if currentTime< process.arrivalTime:
-                currentTime=process.arrivalTime
-            if process.responseTime==-1:
-                process.responseTime=currentTime-process.arrivalTime
-            currentTime+= process.burstTime
-            process.completionTime=currentTime
-            process.turnaroundTime=process.completionTime-process.arrivalTime
-            process.waitingTime=process.turnaroundTime-process.burstTime
+        processes = self._makeProcessCopy()
+        processes.sort(key=lambda p: p.arrivalTime)
+
+        currentTime = 0
+        previousProcessId = None
+        finishedProcesses: List[Process] = []
+
+        for process in processes:
+            # advance time if CPU idle
+            if currentTime < process.arrivalTime:
+                currentTime = process.arrivalTime
+                previousProcessId = None
+
+            # apply context switch if switching from another process
+            if previousProcessId is not None and previousProcessId != process.processId:
+                currentTime += self.contextSwitchTime
+
+            # set response time if first scheduled
+            if process.responseTime == -1:
+                process.responseTime = currentTime - process.arrivalTime
+
+            # run to completion
+            currentTime += process.burstTime
+            process.completionTime = currentTime
+            process.turnaroundTime = process.completionTime - process.arrivalTime
+            process.waitingTime = process.turnaroundTime - process.originalBurstTime
+
             finishedProcesses.append(process)
+            previousProcessId = process.processId
 
-        return self.calculatePerformance(finishedProcesses)
+        return self._computePerformance(finishedProcesses)
 
-    def shortestJobFirst(self):
+    def shortestJobFirst(self) -> Dict[str, float]:
         """
-        This method implements the non-preemptive Shortest Job First scheduling algorithm.
-        It begins by resetting all process states and initializing the current time to zero.
-        The algorithm maintains a list of unfinished processes and iterates until all processes are completed.
-        At each step, it identifies all processes that have arrived by the current time.
-        If no processes are available, it advances time to the next process arrival. From the available processes, it selects the one with the smallest burst time (shortest job).
-        For the selected process, it calculates response time (if this is the first time it's scheduled), updates the current time by adding the process's burst time, then computes completion time, turnaround time, and waiting time.
-        The completed process is moved to the finished list and removed from the pending list.
-        Finally, it returns performance metrics for all completed processes.
+        SJF (non-preemptive), tie-break by arrival time.
         """
-        self.resetProcesses()
-        currentTime=0
-        finishedProcesses=[]
-        processesLeft=self.processes[:] #creates a copy of the self.processes list
+        processes = self._makeProcessCopy()
+        processes_left = sorted(processes, key=lambda p: p.arrivalTime)
 
-        while processesLeft: #While the list is not empty, empty list= False and list with elements= True
-            availableProcesses=[
-                process for process in processesLeft if process.arrivalTime<= currentTime
-            ]
-            if not availableProcesses:
-                currentTime=min(process.arrivalTime for process in processesLeft)
+        currentTime = 0
+        previousProcessId = None
+        finishedProcesses: List[Process] = []
+
+        while processes_left:
+            readyProcesses = [p for p in processes_left if p.arrivalTime <= currentTime]
+            if not readyProcesses:
+                # jump to the next arrival
+                currentTime = processes_left[0].arrivalTime
+                previousProcessId = None
                 continue
 
-            currentProcess=min(availableProcesses, key=lambda process:process.burstTime)
-            if currentProcess.responseTime==-1:
-                currentProcess.responseTime=currentTime-currentProcess.arrivalTime
-            currentTime+=currentProcess.burstTime
-            currentProcess.completionTime=currentTime
-            currentProcess.turnaroundTime=currentProcess.completionTime-currentProcess.arrivalTime
-            currentProcess.waitingTime=currentProcess.turnaroundTime-currentProcess.burstTime
+            # pick smallest burst; tie by arrival time
+            currentProcess = min(readyProcesses, key=lambda p: (p.burstTime, p.arrivalTime))
+            processes_left.remove(currentProcess)
+
+            if previousProcessId is not None and previousProcessId != currentProcess.processId:
+                currentTime += self.contextSwitchTime
+
+            if currentProcess.responseTime == -1:
+                currentProcess.responseTime = currentTime - currentProcess.arrivalTime
+
+            currentTime += currentProcess.burstTime
+            currentProcess.completionTime = currentTime
+            currentProcess.turnaroundTime = currentProcess.completionTime - currentProcess.arrivalTime
+            currentProcess.waitingTime = currentProcess.turnaroundTime - currentProcess.originalBurstTime
+
             finishedProcesses.append(currentProcess)
-            processesLeft.remove(currentProcess)
+            previousProcessId = currentProcess.processId
 
+        return self._computePerformance(finishedProcesses)
 
-        return self.calculatePerformance(finishedProcesses)
-
-
-    def shortestRemainingTimeFirstFCFS(self):
+    def shortestRemainingTimeFirstFCFS(self) -> Dict[str, float]:
         """
-        This method implements the preemptive Shortest Remaining Time First algorithm with FCFS tie-breaking.
-        It starts by resetting process states and initializing time to zero.
-        The algorithm maintains separate lists for unfinished processes and a ready queue of processes that have arrived but not completed.
-        It processes in time increments, checking for new arrivals at each time unit.
-        If no processes are ready, it advances time to the next arrival.
-        From the ready queue, it selects the process with the smallest remaining burst time, breaking ties by choosing the earliest arrival (FCFS).
-        It records response time when a process first runs, then executes the process for one time unit.
-        When a process completes (burst time reaches zero), it calculates completion metrics and moves it to the finished list.
-        This continues until all processes are completed, then returns performance metrics.
+        SRTF preemptive; tie-break by earliest arrival (FCFS).
         """
-        self.resetProcesses()
-        currentTime=0
-        processesLeft=self.processes[:]
-        finishedProcesses=[]
-        readyQueue=[]
+        processes = self._makeProcessCopy()
+        remainingTimeMap = {p.processId: p.burstTime for p in processes}
+        processes_left = sorted(processes, key=lambda p: p.arrivalTime)
 
-        while processesLeft or readyQueue:
-            readyQueue.extend(
-                [process for process in processesLeft if process.arrivalTime<= currentTime]
-            )
-            processesLeft=[process for process in processesLeft if process.arrivalTime > currentTime]
-            if not readyQueue:
-                currentTime=min(process.arrivalTime for process in processesLeft)
-                continue
-            currentProcess= min(readyQueue, key=lambda process:(process.burstTime,process.arrivalTime))
-            if currentProcess.responseTime==-1:
-                currentProcess.responseTime=currentTime-currentProcess.arrivalTime
+        currentTime = 0
+        previousProcessId = None
+        finishedProcesses: List[Process] = []
+        completedCount = 0
+        totalProcesses = len(processes)
 
-            currentProcess.burstTime-=1
-            currentTime+=1
-            if currentProcess.burstTime==0:
-                currentProcess.completionTime=currentTime
-                currentProcess.turnaroundTime=currentProcess.completionTime-currentProcess.arrivalTime
-                currentProcess.waitingTime=currentProcess.turnaroundTime-currentProcess.originalBurstTime
-                finishedProcesses.append(currentProcess)
-                readyQueue.remove(currentProcess)
+        while completedCount < totalProcesses:
+            # gather ready processes
+            readyProcesses = [p for p in processes_left if p.arrivalTime <= currentTime and remainingTimeMap[p.processId] > 0]
 
-        return self.calculatePerformance(finishedProcesses)
-
-
-    def shortestRemainingTimeFirstPriority(self):
-        """
-        This method implements the preemptive Shortest Remaining Time First algorithm with priority-based tie-breaking.
-        It first ensures all processes have priority values assigned, prompting for input if missing.
-        Like the FCFS version, it maintains unfinished processes and a ready queue, processing in single time unit increments.
-        The key difference is in tie-breaking: when multiple processes have the same remaining burst time, it selects the one with the highest priority (largest priority value).
-        It updates response time on first execution, processes for one time unit, and handles completion by calculating final metrics.
-        The algorithm continues until all processes finish, then returns comprehensive performance statistics including average waiting time, turnaround time, response time, and throughput.
-        """
-        #Ask for priorities
-        for process in self.processes:
-            if process.priority is None:
-                process.priority=safePriorityInput(f"Enter priority for Process {process.processId}: ")
-        self.resetProcesses()
-        currentTime=0
-        processesLeft=self.processes[:]
-        finishedProcesses=[]
-        readyQueue=[]
-
-        while processesLeft or readyQueue:
-            readyQueue.extend(
-                [process for process in processesLeft if process.arrivalTime<=currentTime]
-            )
-            processesLeft=[process for process in processesLeft if process.arrivalTime> currentTime]
-
-            if not readyQueue:
-                currentTime=min(process.arrivalTime for process in processesLeft)
+            if not readyProcesses:
+                # idle -> advance time
+                if processes_left:
+                    currentTime = processes_left[0].arrivalTime
+                    previousProcessId = None
+                else:
+                    break
                 continue
 
-            currentProcess=min(
-                readyQueue,key=lambda process: (process.burstTime,-process.priority)
-            )
-            if currentProcess.responseTime==-1:
-                currentProcess.responseTime=currentTime-currentProcess.arrivalTime
+            # choose by smallest remaining then earliest arrival
+            readyProcesses.sort(key=lambda p: (remainingTimeMap[p.processId], p.arrivalTime))
+            currentProcess = readyProcesses[0]
+            pid = currentProcess.processId
 
-            currentProcess.burstTime-=1
-            currentTime+=1
+            # if switching, account for context switch
+            if previousProcessId is not None and previousProcessId != pid:
+                currentTime += self.contextSwitchTime
 
-            if currentProcess.burstTime==0:
-                currentProcess.completionTime=currentTime
-                currentProcess.turnaroundTime=currentProcess.completionTime-currentProcess.arrivalTime
-                currentProcess.waitingTime=currentProcess.turnaroundTime-currentProcess.originalBurstTime
+            if currentProcess.responseTime == -1:
+                currentProcess.responseTime = currentTime - currentProcess.arrivalTime
+
+            # execute one time unit
+            remainingTimeMap[pid] -= 1
+            currentTime += 1
+
+            if remainingTimeMap[pid] == 0:
+                # finished
+                currentProcess.completionTime = currentTime
+                currentProcess.turnaroundTime = currentProcess.completionTime - currentProcess.arrivalTime
+                currentProcess.waitingTime = currentProcess.turnaroundTime - currentProcess.originalBurstTime
                 finishedProcesses.append(currentProcess)
-                readyQueue.remove(currentProcess)
+                completedCount += 1
+                previousProcessId = pid
+            else:
+                previousProcessId = pid
 
-        return self.calculatePerformance(finishedProcesses)
+        return self._computePerformance(finishedProcesses)
 
+    def shortestRemainingTimeFirstPriority(self) -> Dict[str, float]:
+        """
+        SRTF preemptive; tie-break by higher priority (higher numeric value = higher priority).
+        When remaining times are equal, the process with the higher priority is chosen.
+        """
+        processes = self._makeProcessCopy()
+        remainingTimeMap = {p.processId: p.burstTime for p in processes}
+        processes_left = sorted(processes, key=lambda p: p.arrivalTime)
 
+        currentTime = 0
+        previousProcessId = None
+        finishedProcesses: List[Process] = []
+        completedCount = 0
+        totalProcesses = len(processes)
 
+        while completedCount < totalProcesses:
+            readyProcesses = [p for p in processes_left if p.arrivalTime <= currentTime and remainingTimeMap[p.processId] > 0]
+
+            if not readyProcesses:
+                if processes_left:
+                    currentTime = processes_left[0].arrivalTime
+                    previousProcessId = None
+                else:
+                    break
+                continue
+
+            # choose by remaining time then by negative priority (so larger priority wins)
+            readyProcesses.sort(key=lambda p: (remainingTimeMap[p.processId], -p.priority, p.arrivalTime))
+            currentProcess = readyProcesses[0]
+            pid = currentProcess.processId
+
+            if previousProcessId is not None and previousProcessId != pid:
+                currentTime += self.contextSwitchTime
+
+            if currentProcess.responseTime == -1:
+                currentProcess.responseTime = currentTime - currentProcess.arrivalTime
+
+            remainingTimeMap[pid] -= 1
+            currentTime += 1
+
+            if remainingTimeMap[pid] == 0:
+                currentProcess.completionTime = currentTime
+                currentProcess.turnaroundTime = currentProcess.completionTime - currentProcess.arrivalTime
+                currentProcess.waitingTime = currentProcess.turnaroundTime - currentProcess.originalBurstTime
+                finishedProcesses.append(currentProcess)
+                completedCount += 1
+                previousProcessId = pid
+            else:
+                previousProcessId = pid
+
+        return self._computePerformance(finishedProcesses)
+
+    def priorityNonPreemptive(self) -> Dict[str, float]:
+        """
+        Non-preemptive priority scheduling (higher numeric value = higher priority).
+        Tie-break by arrival time.
+        """
+        processes = self._makeProcessCopy()
+        processes_left = sorted(processes, key=lambda p: p.arrivalTime)
+
+        currentTime = 0
+        previousProcessId = None
+        finishedProcesses: List[Process] = []
+
+        while processes_left:
+            readyProcesses = [p for p in processes_left if p.arrivalTime <= currentTime]
+            if not readyProcesses:
+                currentTime = processes_left[0].arrivalTime
+                previousProcessId = None
+                continue
+
+            # choose highest priority (max). tie-break by arrival time
+            readyProcesses.sort(key=lambda p: (-p.priority, p.arrivalTime))
+            currentProcess = readyProcesses[0]
+            processes_left.remove(currentProcess)
+
+            if previousProcessId is not None and previousProcessId != currentProcess.processId:
+                currentTime += self.contextSwitchTime
+
+            if currentProcess.responseTime == -1:
+                currentProcess.responseTime = currentTime - currentProcess.arrivalTime
+
+            currentTime += currentProcess.burstTime
+            currentProcess.completionTime = currentTime
+            currentProcess.turnaroundTime = currentProcess.completionTime - currentProcess.arrivalTime
+            currentProcess.waitingTime = currentProcess.turnaroundTime - currentProcess.originalBurstTime
+
+            finishedProcesses.append(currentProcess)
+            previousProcessId = currentProcess.processId
+
+        return self._computePerformance(finishedProcesses)
+
+    def priorityPreemptive(self) -> Dict[str, float]:
+        """
+        Preemptive priority scheduling (higher numeric value = higher priority).
+        At each time unit, pick the ready process with highest priority; tie-breaker: smaller remaining time then arrival time.
+        """
+        processes = self._makeProcessCopy()
+        remainingTimeMap = {p.processId: p.burstTime for p in processes}
+        processes_left = sorted(processes, key=lambda p: p.arrivalTime)
+
+        currentTime = 0
+        previousProcessId = None
+        finishedProcesses: List[Process] = []
+        completedCount = 0
+        totalProcesses = len(processes)
+
+        while completedCount < totalProcesses:
+            readyProcesses = [p for p in processes_left if p.arrivalTime <= currentTime and remainingTimeMap[p.processId] > 0]
+
+            if not readyProcesses:
+                if processes_left:
+                    currentTime = processes_left[0].arrivalTime
+                    previousProcessId = None
+                else:
+                    break
+                continue
+
+            # choose by priority (max), then remaining time, then arrival
+            readyProcesses.sort(key=lambda p: (-p.priority, remainingTimeMap[p.processId], p.arrivalTime))
+            currentProcess = readyProcesses[0]
+            pid = currentProcess.processId
+
+            if previousProcessId is not None and previousProcessId != pid:
+                currentTime += self.contextSwitchTime
+
+            if currentProcess.responseTime == -1:
+                currentProcess.responseTime = currentTime - currentProcess.arrivalTime
+
+            # execute one time unit
+            remainingTimeMap[pid] -= 1
+            currentTime += 1
+
+            if remainingTimeMap[pid] == 0:
+                currentProcess.completionTime = currentTime
+                currentProcess.turnaroundTime = currentProcess.completionTime - currentProcess.arrivalTime
+                currentProcess.waitingTime = currentProcess.turnaroundTime - currentProcess.originalBurstTime
+                finishedProcesses.append(currentProcess)
+                completedCount += 1
+                previousProcessId = pid
+            else:
+                previousProcessId = pid
+
+        return self._computePerformance(finishedProcesses)
+
+    def roundRobin(self, timeQuantum: int) -> Dict[str, float]:
+        """
+        Round Robin scheduling. timeQuantum is required.
+        Context switch overhead is applied whenever the CPU switches to a different process.
+        """
+        if timeQuantum <= 0:
+            raise ValueError("timeQuantum must be a positive integer")
+
+        processes = self._makeProcessCopy()
+        processes.sort(key=lambda p: p.arrivalTime)
+
+        remainingTimeMap = {p.processId: p.burstTime for p in processes}
+        arrivalIndex = 0
+        readyQueue = deque()
+        currentTime = 0
+        previousProcessId = None
+        finishedProcesses: List[Process] = []
+        totalProcesses = len(processes)
+
+        # helper to enqueue arrivals up to currentTime
+        def enqueueArrivals():
+            nonlocal arrivalIndex
+            while arrivalIndex < totalProcesses and processes[arrivalIndex].arrivalTime <= currentTime:
+                readyQueue.append(processes[arrivalIndex])
+                arrivalIndex += 1
+
+        # start by enqueuing arrivals at time 0
+        enqueueArrivals()
+
+        while len(finishedProcesses) < totalProcesses:
+            if not readyQueue:
+                # idle: fast-forward to next arrival
+                if arrivalIndex < totalProcesses:
+                    currentTime = processes[arrivalIndex].arrivalTime
+                    enqueueArrivals()
+                    previousProcessId = None
+                else:
+                    break
+                continue
+
+            currentProcess = readyQueue.popleft()
+            pid = currentProcess.processId
+
+            # apply context switch time if switching between different processes
+            if previousProcessId is not None and previousProcessId != pid:
+                currentTime += self.contextSwitchTime
+
+            # set response time if first time running
+            if currentProcess.responseTime == -1:
+                currentProcess.responseTime = currentTime - currentProcess.arrivalTime
+
+            # execute for a quantum or remaining time
+            executionTime = min(timeQuantum, remainingTimeMap[pid])
+            remainingTimeMap[pid] -= executionTime
+            currentTime += executionTime
+
+            # enqueue arrivals that came during the execution window
+            enqueueArrivals()
+
+            if remainingTimeMap[pid] == 0:
+                # finished
+                currentProcess.completionTime = currentTime
+                currentProcess.turnaroundTime = currentProcess.completionTime - currentProcess.arrivalTime
+                currentProcess.waitingTime = currentProcess.turnaroundTime - currentProcess.originalBurstTime
+                finishedProcesses.append(currentProcess)
+                previousProcessId = pid
+            else:
+                # requeue for next round
+                readyQueue.append(currentProcess)
+                previousProcessId = pid
+
+        return self._computePerformance(finishedProcesses)

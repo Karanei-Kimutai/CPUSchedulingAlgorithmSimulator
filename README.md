@@ -1,144 +1,265 @@
-# CPU Scheduling Algorithm Simulator
+CPU Scheduling Algorithm Simulator
+==================================
 
-## Overview
+Overview
+--------
 
-The CPU Scheduling Algorithm Simulator is a Python-based application that demonstrates various CPU scheduling algorithms used in operating systems. This educational tool allows users to input processes with different characteristics and observe how different scheduling algorithms handle process execution, providing insights into their performance metrics.
+The **CPU Scheduling Algorithm Simulator** is a Python-based application designed to simulate and compare multiple CPU scheduling algorithms.It provides both an **educational tool** for students learning operating systems and a **practical analysis tool** for experimenting with scheduling strategies.
 
-## Features
+The simulator allows users to:
 
-- Implementation of four CPU scheduling algorithms:
-  - First-Come-First-Serve (FCFS)
-  - Shortest Job First (SJF)
-  - Shortest Remaining Time First with FCFS tie-breaking
-  - Shortest Remaining Time First with Priority tie-breaking
-- Interactive command-line interface for process input and algorithm selection
-- Comprehensive performance metrics calculation:
-  - Average Waiting Time
-  - Average Turnaround Time
-  - Average Response Time
-  - Throughput
-- Unit testing suite to verify algorithm correctness
+*   Input or generate a large number of processes (e.g., 1000).
+    
+*   Configure scheduling algorithms with context switching overhead.
+    
+*   View performance metrics numerically and compare them visually through graphs.
+    
 
-## Scheduling Algorithms Explained
+Features
+--------
+
+*   Implementation of **seven CPU scheduling algorithms**:
+    
+    *   First-Come-First-Serve (FCFS)
+        
+    *   Shortest Job First (SJF)
+        
+    *   Shortest Remaining Time First (SRTF) with FCFS tie-breaking
+        
+    *   Shortest Remaining Time First (SRTF) with Priority tie-breaking
+        
+    *   Priority Scheduling (Non-Preemptive)
+        
+    *   Priority Scheduling (Preemptive)
+        
+    *   Round Robin (configurable quantum)
+        
+*   **Performance metrics calculated for each algorithm**:
+    
+    *   Average Waiting Time
+        
+    *   Average Turnaround Time
+        
+    *   Average Response Time
+        
+    *   Throughput
+        
+*   **Interactive command-line interface (CLI)** with safe user input:
+    
+    *   Users can choose **arrival time distribution** (uniform, exponential, normal).
+        
+    *   Users can choose **burst time distribution** (short jobs, mixed, long jobs).
+        
+    *   Users can enter a **constant context switch time**.
+        
+*   **Automated process dataset generation** for large simulations.
+    
+*   **Graphical output**:
+    
+    *   Each metric is plotted separately (Waiting, Turnaround, Response, Throughput).
+        
+    *   Graphs are saved in an outputs/ directory inside the project.
+        
+*   **Unit tests** verifying correctness of all algorithms.
+    
+
+Scheduling Algorithms Explained
+-------------------------------
 
 ### First-Come-First-Serve (FCFS)
-A non-preemptive algorithm that executes processes in the order of their arrival. The first process to arrive is the first to be served. While simple to implement, it can lead to long waiting times for processes that arrive just after a long process.
+
+Non-preemptive. Processes are executed in order of arrival. Simple, but long jobs delay shorter ones (convoy effect).
 
 ### Shortest Job First (SJF)
-A non-preemptive algorithm that selects the process with the smallest burst time from the available processes. This algorithm minimizes average waiting time but requires knowing the burst times in advance, which is often not practical in real systems.
 
-### Shortest Remaining Time First (SRTF) with FCFS Tie-Breaking
-A preemptive version of SJF where the scheduler always chooses the process with the shortest remaining execution time. If multiple processes have the same remaining time, the one that arrived first is selected. This algorithm can context-switch frequently but provides optimal average waiting time.
+Non-preemptive. Picks the process with the smallest burst time. Minimizes waiting time but requires knowledge of job lengths.
 
-### Shortest Remaining Time First (SRTF) with Priority Tie-Breaking
-Similar to the FCFS version but uses process priority to break ties when remaining times are equal. Higher priority values indicate higher priority. This approach allows for more control over process execution order.
+### Shortest Remaining Time First (SRTF) with FCFS Tie-Break
 
-## Code Implementation Details
+Preemptive. Always executes the process with the smallest remaining burst. Ties are resolved by earliest arrival.
 
-### Process Class (`process.py`)
-The `Process` class represents a single process with the following attributes:
-- `processId`: Unique identifier for the process
-- `arrivalTime`: Time when the process arrives in the system
-- `burstTime`: CPU time required by the process
-- `priority`: Priority level (higher number = higher priority)
-- Computed metrics: completionTime, turnaroundTime, waitingTime, responseTime
-- `originalBurstTime`: Stores the initial burst time for reset purposes
+### Shortest Remaining Time First (SRTF) with Priority Tie-Break
 
-### Scheduler Class (`scheduler.py`)
-The main class that implements all scheduling algorithms. Key methods include:
+Preemptive. Same as above, but ties are broken by priority (higher number = higher priority).
 
-1. `resetProcesses()`: Resets all process states before running an algorithm
-2. `calculatePerformance()`: Computes average metrics and throughput
-3. `firstComeFirstServe()`: Implements FCFS scheduling
-4. `shortestJobFirst()`: Implements SJF scheduling
-5. `shortestRemainingTimeFirstFCFS()`: Implements SRTF with FCFS tie-breaking
-6. `shortestRemainingTimeFirstPriority()`: Implements SRTF with priority tie-breaking
+### Priority Scheduling (Non-Preemptive)
 
-### Utility Functions (`utils.py`)
-Contains helper functions for safe input handling:
-- `safeInput()`: Ensures non-negative integer input
-- `safePriorityInput()`: Ensures valid positive integer priority input
+Executes the process with the highest priority among the available ones. Ties can be resolved with arrival order.
 
-### Main Program (`main.py`)
-The entry point of the application that:
-1. Collects process information from the user
-2. Presents a menu of scheduling algorithms
-3. Executes the selected algorithm
-4. Displays performance results
-5. Allows running multiple algorithms in sequence
+### Priority Scheduling (Preemptive)
 
-### Testing (`test_simulator.py`)
-Comprehensive unit tests that verify the correctness of each scheduling algorithm using a fixed set of processes with known expected results.
+Preemptive. A new higher-priority process can interrupt the currently running process.
 
-## How to Run the Simulator
+### Round Robin
 
-1. Ensure you have Python 3.x installed on your system
-2. Clone or download the project files
-3. Navigate to the project directory in your terminal/command prompt
-4. Run the main program:
-   ```
-   python main.py
-   ```
-5. Follow the prompts to enter the number of processes and their details
-6. Select a scheduling algorithm from the menu
-7. View the results and choose to run another algorithm or exit
+Preemptive. Each process gets CPU for a fixed time quantum, then goes to the back of the ready queue. Fair and widely used in time-sharing systems.
 
-## Running Tests
+Implementation Details
+----------------------
 
-To execute the unit tests and verify the algorithms:
-```
-python test_simulator.py
-```
+### Process Class (process.py)
 
-## Example Usage
+Represents a process with attributes:
 
-1. Start the program and enter the number of processes (e.g., 3)
-2. For each process, provide:
-   - Arrival time (e.g., 0, 1, 2)
-   - Burst time (e.g., 8, 4, 5)
-   - Priority (for algorithms that use it)
-3. Select an algorithm from the menu (e.g., 2 for SJF)
-4. View the performance metrics:
-   - Average Waiting Time
-   - Average Turnaround Time
-   - Average Response Time
-   - Throughput
-5. Choose to run another algorithm or exit
+*   processId (unique identifier)
+    
+*   arrivalTime
+    
+*   burstTime
+    
+*   priority
+    
+*   Metrics: completionTime, turnaroundTime, waitingTime, responseTime
+    
+*   originalBurstTime for resetting in preemptive scheduling
+    
 
-## Performance Metrics Explained
+### Scheduler Class (scheduler.py)
 
-- **Waiting Time**: Total time a process spends waiting in the ready queue
-- **Turnaround Time**: Total time from process arrival to completion (waiting + execution)
-- **Response Time**: Time from process arrival to first response (first time it gets CPU)
-- **Throughput**: Number of processes completed per unit time
+Implements all algorithms and metrics calculation.Key methods include:
 
-## Educational Value
+*   resetProcesses() – resets process state before each run
+    
+*   calculatePerformance() – computes average metrics and throughput
+    
+*   Algorithm methods (firstComeFirstServe, shortestJobFirst, etc.)
+    
+*   roundRobin(quantum) – accepts a time quantum
+    
+*   Algorithms account for **contextSwitchTime** when processes switch
+    
 
-This simulator helps students and developers understand:
-- The differences between various CPU scheduling algorithms
-- How preemptive and non-preemptive scheduling differ
-- The trade-offs between different scheduling strategies
-- How to calculate and interpret performance metrics
-- The importance of process characteristics (arrival time, burst time, priority) on scheduling outcomes
+### Data Generation (dataGenerator.py)
 
-## Limitations and Future Enhancements
+Automatically generates processes:
 
-- Currently supports only a limited set of scheduling algorithms
-- Does not visualize the scheduling process (Gantt charts)
-- No support for I/O operations or process blocking
-- Potential enhancements could include:
-  - Additional scheduling algorithms (Round Robin, Priority Scheduling)
-  - Graphical visualization of scheduling timelines
-  - Support for I/O-bound processes
-  - Comparative analysis of multiple algorithms
+*   User chooses **arrival time distribution** (uniform, normal, exponential).
+    
+*   User chooses **burst time distribution** (short, mixed, long).
+    
+*   User specifies **number of processes** (e.g., 1000).
+    
+*   Generated processes are exported to an Excel/CSV file in outputs/.
+    
 
-## Contributing
+### Graphing (graphGenerator.py)
 
-Contributions to improve the simulator are welcome. Please ensure:
-- Code follows the existing style and conventions
-- New features include appropriate unit tests
-- Documentation is updated to reflect changes
+*   Generates **comparison graphs** for each metric across algorithms.
+    
+*   Saves results in outputs/graphs/.
+    
 
-## License
+### Utility Functions (utils.py)
 
-This project is open source and available under the MIT License.
+*   safeInput(prompt) – ensures valid non-negative integer input
+    
+*   safeFloatInput(prompt) – ensures valid float input (for switch times)
+    
+*   safeChoiceInput(prompt, choices) – ensures valid menu selections
+    
+
+### Main Program (main.py)
+
+The interactive entry point:
+
+1.  Asks user for number of processes.
+    
+2.  Lets user choose between **manual input** or **automatic dataset generation**.
+    
+3.  Prompts for arrival/burst distribution (if generating).
+    
+4.  Prompts for context switch time.
+    
+5.  Runs all scheduling algorithms on the dataset.
+    
+6.  Displays performance results in the CLI.
+    
+7.  Saves comparison graphs in the outputs/ folder.
+    
+
+### Testing (testSimulator.py)
+
+Unit tests covering all algorithms with a fixed dataset of 4 processes to validate correctness.
+
+How to Run the Simulator
+------------------------
+
+1.  Ensure you have **Python 3.x** installed.
+    
+2.  pip install -r requirements.txt
+    
+3.  python src/main.py
+    
+4.  Follow the prompts to configure the simulation and view results.
+    
+
+Running Tests
+-------------
+
+To verify algorithms
+
+python src/testSimulator.py   `
+
+Output
+------
+
+*   Numerical results are displayed in the terminal.
+    
+*   Graphs are saved in outputs/graphs/.
+    
+*   Example graph: comparison of Average Waiting Time across algorithms.
+    
+
+Educational Value
+-----------------
+
+This simulator demonstrates:
+
+*   The trade-offs between scheduling algorithms.
+    
+*   The effect of **preemptive vs non-preemptive** scheduling.
+    
+*   How **process characteristics** affect scheduling outcomes.
+    
+*   The impact of **context switching overhead**.
+    
+*   How large datasets (e.g., 1000 processes) behave compared to small sets.
+    
+
+Limitations & Future Work
+-------------------------
+
+*   Assumes CPU-bound processes only (no I/O).
+    
+*   Uses synthetic distributions; real-world traces would provide deeper insights.
+    
+*   Gantt chart visualization not yet included.
+    
+
+Planned enhancements:
+
+*   Add multi-level feedback queues.
+    
+*   Add Gantt chart visualization.
+    
+*   Support I/O burst modeling.
+    
+*   Extend dataset import/export capabilities.
+    
+
+Contributing
+------------
+
+We welcome contributions:
+
+*   Ensure code follows naming conventions (camelCase, descriptive).
+    
+*   Add/update unit tests for new features.
+    
+*   Document changes clearly in README.
+    
+
+License
+-------
+
+This project is open source under the MIT License.

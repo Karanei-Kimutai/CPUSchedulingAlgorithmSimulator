@@ -53,11 +53,21 @@ def safeInput(promptMessage: str, castType: Type = str, validOptions: Optional[I
         return castedValue
 
 
-def ensureDirectoryExists(directoryPath: str) -> None:
+def ensureDirectoryExists(directoryPath: str) -> str:
     """
-    Create the directory if it does not exist. No-op if it exists.
+    Create the directory inside the project root if it does not exist. 
+    Always resolves relative to the project root, not the current working directory.
 
     Args:
         directoryPath: path to directory (relative or absolute).
+
+    Returns:
+        The absolute path of the ensured directory.
     """
-    os.makedirs(directoryPath, exist_ok=True)
+    #Resolve base directory(two levels up from this file)
+    baseDirectory=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    absolutePath=os.path.join(baseDirectory,directoryPath)
+    # Create directory if it doesn't exist
+    os.makedirs(absolutePath, exist_ok=True)
+    return absolutePath
+

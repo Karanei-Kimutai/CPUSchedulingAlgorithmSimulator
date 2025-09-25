@@ -1,7 +1,7 @@
 """
 Results visualizer: creates and saves bar charts that compare algorithms for each metric.
 
-Saves PNG files to src/outputs/graphs/
+Saves PNG files to outputs/graphs/
 """
 
 import os
@@ -10,7 +10,7 @@ from typing import Dict
 from utils import ensureDirectoryExists
 
 
-def saveMetricGraphs(resultsByAlgorithm: Dict[str, Dict[str, float]], outputDirectory: str = "src/outputs/graphs") -> None:
+def saveMetricGraphs(resultsByAlgorithm: Dict[str, Dict[str, float]], outputDirectory: str = "outputs/graphs") -> None:
     """
     Given resultsByAlgorithm (mapping algorithmName -> {metricName: value}),
     create a bar chart for each metric and save to outputDirectory.
@@ -19,7 +19,7 @@ def saveMetricGraphs(resultsByAlgorithm: Dict[str, Dict[str, float]], outputDire
         resultsByAlgorithm: dict mapping algorithm names to metric dicts
         outputDirectory: path where graphs should be saved
     """
-    ensureDirectoryExists(outputDirectory)
+    outputDirectory = ensureDirectoryExists(outputDirectory)
 
     # Derive metric names from first algorithm's metric dict
     firstAlgorithmMetrics = next(iter(resultsByAlgorithm.values()))

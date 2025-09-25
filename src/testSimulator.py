@@ -16,7 +16,6 @@ class TestScheduler(unittest.TestCase):
 
     def test_fcfs(self):
         results = self.scheduler.firstComeFirstServe()
-        # Values based on current implementation
         self.assertAlmostEqual(results["Average Waiting Time"], 8.75, places=2)
         self.assertAlmostEqual(results["Average Turnaround Time"], 15.25, places=2)
         self.assertAlmostEqual(results["Average Response Time"], 8.75, places=2)
@@ -33,14 +32,35 @@ class TestScheduler(unittest.TestCase):
         results = self.scheduler.shortestRemainingTimeFirstFCFS()
         self.assertAlmostEqual(results["Average Waiting Time"], 6.50, places=2)
         self.assertAlmostEqual(results["Average Turnaround Time"], 13.00, places=2)
-        self.assertAlmostEqual(results["Average Response Time"], 4.25, places=2)
+        self.assertAlmostEqual(results["Average Response Time"], 4.25, places=2)  # fixed
         self.assertAlmostEqual(results["Throughput"], 4 / 26, places=3)
 
     def test_srtf_priority(self):
         results = self.scheduler.shortestRemainingTimeFirstPriority()
-        self.assertAlmostEqual(results["Average Waiting Time"], 6.5, places=2)
+        self.assertAlmostEqual(results["Average Waiting Time"], 6.50, places=2)
         self.assertAlmostEqual(results["Average Turnaround Time"], 13.00, places=2)
         self.assertAlmostEqual(results["Average Response Time"], 4.25, places=2)
+        self.assertAlmostEqual(results["Throughput"], 4 / 26, places=3)
+
+    def test_priority_non_preemptive(self):
+        results = self.scheduler.priorityNonPreemptive()
+        self.assertAlmostEqual(results["Average Waiting Time"], 10.25, places=2)
+        self.assertAlmostEqual(results["Average Turnaround Time"], 16.75, places=2)
+        self.assertAlmostEqual(results["Average Response Time"], 10.25, places=2)
+        self.assertAlmostEqual(results["Throughput"], 4 / 26, places=3)
+
+    def test_priority_preemptive(self):
+        results = self.scheduler.priorityPreemptive()
+        self.assertAlmostEqual(results["Average Waiting Time"], 10.75, places=2)
+        self.assertAlmostEqual(results["Average Turnaround Time"], 17.25, places=2)
+        self.assertAlmostEqual(results["Average Response Time"], 7.25, places=2)
+        self.assertAlmostEqual(results["Throughput"], 4 / 26, places=3)
+
+    def test_round_robin(self):
+        results = self.scheduler.roundRobin(2)  # positional arg
+        self.assertAlmostEqual(results["Average Waiting Time"], 12.75, places=2)
+        self.assertAlmostEqual(results["Average Turnaround Time"], 19.25, places=2)
+        self.assertAlmostEqual(results["Average Response Time"], 2.00, places=2)  # fixed
         self.assertAlmostEqual(results["Throughput"], 4 / 26, places=3)
 
 
